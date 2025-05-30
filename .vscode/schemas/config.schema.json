@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "description": "MIDI-Normalizer configuration file",
+  "required": ["velocities", "channels"],
+  "properties": {
+    "velocities": {
+      "description": "Velocity settings for MIDI normalization",
+      "type": "object",
+      "required": ["min", "max"],
+      "properties": {
+        "min": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0.1,
+          "description": "Minimum velocity value"
+        },
+        "max": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "Maximum velocity value"
+        },
+        "scaleFactor": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "Scale factor for velocities"
+        }
+      }
+    },
+    "channels": {
+      "description": "Channel matching rules for MIDI normalization",
+      "type": "object",
+      "required": ["match"],
+      "properties": {
+        "match": {
+          "type": "array",
+          "description": "List of patterns and channels to match",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "exclusive": {
+                    "type": "boolean",
+                    "description": "If true, when a pattern matches, no other patterns will be applied to the same channel",
+                    "default": false
+                  }
+                }
+              }
+            ],
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["patterns", "channels"],
+                "properties": {
+                  "patterns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Patterns to match against MIDI channel / instrument names"
+                  },
+                  "channels": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 16
+                    },
+                    "description": "MIDI channels to apply the patterns to"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["includes", "channels"],
+                "properties": {
+                  "includes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "String include patterns for channel / instrument name matching"
+                  },
+                  "channels": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 16
+                    },
+                    "description": "MIDI channels to apply the string-includes to"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

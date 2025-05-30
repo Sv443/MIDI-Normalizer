@@ -1,0 +1,36 @@
+{
+  "name": "midi-normalizer",
+  "version": "1.0.0",
+  "description": "Bulk-normalizes MIDI files to be in the desired velocity range and channel assignment.",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Sv443",
+    "url": "https://github.com/Sv443"
+  },
+  "license": "MIT",
+  "packageManager": "pnpm@10.11.0",
+  "dependencies": {
+    "@tonejs/midi": "^2.0.28",
+    "prompts": "^2.4.2",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.27.0",
+    "@types/node": "^22.15.27",
+    "@types/prompts": "^2.4.9",
+    "@typescript-eslint/eslint-plugin": "^8.33.0",
+    "@typescript-eslint/parser": "^8.33.0",
+    "@typescript-eslint/utils": "^8.33.0",
+    "eslint": "^9.27.0",
+    "globals": "^16.2.0",
+    "pnpm": "^10.11.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
