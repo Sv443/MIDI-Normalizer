@@ -1,10 +1,11 @@
 {
   "input": {
-    "path": "input",
-    "filePattern": ".*\\.midi?$"
+    "directory": "input",
+    "filePattern": ".*\\.midi?$",
+    "patternCaseInsensitive": false
   },
   "output": {
-    "path": "output",
+    "directory": "output",
     "fileName": "${name}-nrm.${ext}"
   },
   "velocities": {

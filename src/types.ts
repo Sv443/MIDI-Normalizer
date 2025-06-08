@@ -11,14 +11,16 @@ export type NrmConfig = {
 
 export type InputOptions = {
   /** Path to the directory containing all MIDI files */
-  path: string;
+  directory: string;
   /** Pattern to match MIDI files - defaults to `.*\\.midi?$` */
   filePattern?: string;
+  /** Whether to match the file pattern case-insensitively */
+  patternCaseInsensitive?: boolean;
 };
 
 export type OutputOptions = {
   /** Path to the directory where normalized MIDI files will be saved */
-  path: string;
+  directory: string;
   /** Name pattern for each normalized MIDI file */
   fileName: string;
 };

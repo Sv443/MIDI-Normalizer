@@ -7,9 +7,9 @@
     "input": {
       "description": "Configuration for the input files",
       "type": "object",
-      "required": ["path"],
+      "required": ["directory"],
       "properties": {
-        "path": {
+        "directory": {
           "type": "string",
           "description": "Path to the input directory containing MIDI files"
         },
@@ -17,15 +17,20 @@
           "type": "string",
           "default": ".*\\.mid$",
           "description": "Escaped EcmaScript regular expression pattern to match MIDI files - use \".*\\.midi?$\" to match all files ending in .mid or .midi"
+        },
+        "patternCaseInsensitive": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the file pattern matching will be case insensitive"
         }
       }
     },
     "output": {
       "description": "Configuration for the files that result from normalization",
       "type": "object",
-      "required": ["path", "fileName"],
+      "required": ["directory", "fileName"],
       "properties": {
-        "path": {
+        "directory": {
           "type": "string",
           "description": "Path to the output directory where normalized MIDI files will be saved"
         },

@@ -1,8 +1,7 @@
-import { writeFile, readFile } from "node:fs/promises";
+import { writeFile, readFile, stat, mkdir } from "node:fs/promises";
 import { dirname, resolve, basename, extname } from "node:path";
 import { styleText } from "node:util";
 import readdirGlob from "tiny-readdir-glob";
-import prompt from "prompts";
 import { parseMidi, writeMidi, type MidiData } from "midi-file";
 import { randomId } from "@sv443-network/coreutils";
 import type { ChannelsOptions, NrmConfig, OutputOptions, VelocitiesOptions } from "./types.js";
@@ -33,28 +32,20 @@ type MidiObj = {
 //#region run
 
 async function run() {
-  let { midiDir } = await prompt({
-    name: "midiDir",
-    type: "text",
-    message: "Glob pattern to the MIDI files to convert - default is '**/*.mid' (all midi files in all subdirectories of the current directory)",
-    initial: "**/*.mid",
-  });
+  const config = await loadConfig();
 
-  if(!midiDir || midiDir.trim() === "")
-    midiDir = "**/*.mid";
+  console.log("Loaded configuration.");
 
-  const midiFilePaths = await findFiles(dirname(resolve(midiDir)));
+  const inputDir = config.input.directory;
+  const filePattern = new RegExp(config.input.filePattern ?? ".*\\.midi?$", config.input.patternCaseInsensitive ? "i" : undefined);
+
+  const midiFilePaths = (await findFiles(resolve(dirname(inputDir))))
+    .filter(path => filePattern.test(basename(path)));
 
   if(midiFilePaths.length === 0) {
     console.error(styleText("red", "No MIDI files found in the specified directory."));
     return schedExit(1);
   }
-
-  const { outDir } = await prompt({
-    name: "outDir",
-    type: "text",
-    message: "Path to the directory to save the normalized MIDI files",
-  });
 
   const midisRaw: (MidiObj | null)[] = (await Promise.all(
     midiFilePaths.map(async (file) => {
@@ -82,8 +73,6 @@ async function run() {
     return schedExit(1);
   }
 
-  const config = await loadConfig();
-
   const noSilent = midis.map(removeSilent);
 
   console.log("Removed silent notes.");
@@ -95,6 +84,18 @@ async function run() {
   const chNormalized = velNormalized.map(midi => normalizeChannels(midi, config.channels));
 
   console.log("Normalized channels.");
+
+  const outDir = resolve(config.output.directory);
+
+  try {
+    const outDirStat = await stat(outDir);
+    if(!outDirStat.isDirectory())
+      throw new Error(`Output directory ${outDir} is not a directory.`);
+  }
+  catch {
+    await mkdir(outDir, { recursive: true });
+    console.log("Created output directory:", outDir);
+  }
 
   await Promise.all(
     chNormalized.map(async (midi) => {
