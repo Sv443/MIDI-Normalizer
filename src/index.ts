@@ -164,9 +164,10 @@ async function loadConfig(): Promise<NrmConfig> {
     return config as NrmConfig;
   }
   catch {
-    console.log(styleText("yellow", "Couldn't load config file, creating a new one..."));
+    console.log(styleText("yellow", "\nCouldn't load config file, creating a new one..."));
     await writeFile(configPath, JSON.stringify(cfgTemplate, null, 2));
-    return cfgTemplate as NrmConfig;
+    console.log(styleText("green", "Created new config file at config.json. Please edit it, then run the script again.\n"));
+    return schedExit(0), cfgTemplate as NrmConfig;
   }
 }
 
