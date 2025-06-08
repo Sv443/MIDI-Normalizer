@@ -1,4 +1,8 @@
-export type NrmConfig = {
+//#region config
+
+import type { MidiData } from "midi-file";
+
+export type Config = {
   /** Options for input MIDI files */
   input: InputOptions;
   /** Options for output MIDI files */
@@ -55,4 +59,13 @@ export type ChannelsOptions = {
       }
     )
   >;
+};
+
+//#region other
+
+export type MidiObj = {
+  path: string;
+  data: MidiData;
+  instrumentNames: Record<number, string>;
+  trackNames: Record<number, string>;
 };

@@ -1,10 +1,69 @@
 import { writeFile, readFile, stat, mkdir, readdir, unlink } from "node:fs/promises";
-import { resolve, basename, extname } from "node:path";
+import { resolve, basename, extname, join } from "node:path";
 import { styleText } from "node:util";
 import { parseMidi, writeMidi, type MidiData } from "midi-file";
 import { randomId } from "@sv443-network/coreutils";
-import type { ChannelsOptions, NrmConfig, OutputOptions, VelocitiesOptions } from "./types.js";
+import meow from "meow";
+import type { ChannelsOptions, Config, MidiObj, OutputOptions, VelocitiesOptions } from "./types.js";
 import cfgTemplate from "../config.template.json" with { type: "json" };
+import pkg from "../package.json" with { type: "json" };
+
+//#region cli
+
+const { flags } = meow({
+  flags: {
+    callerPath: {
+      type: "string",
+      description: "URI- and B64-encoded path from where the script was called",
+      default: btoa(encodeURIComponent(process.cwd())),
+    },
+    config: {
+      type: "string",
+      shortFlag: "C",
+      aliases: ["c", "cfg"],
+      default: "config.json",
+    },
+    help: {
+      type: "boolean",
+      shortFlag: "h",
+      aliases: ["H", "help", "?"],
+      description: "Show this help message",
+    },
+    version: {
+      type: "boolean",
+      shortFlag: "v",
+      aliases: ["V", "version"],
+      description: "Show the current version",
+    },
+  },
+  allowUnknownFlags: false,
+  importMeta: import.meta,
+  inferType: true,
+});
+
+console.log(flags);
+
+if(flags.help) {
+  console.log(`
+  ${styleText("bold", "Usage:")}
+    $ midinrm [options]
+
+  ${styleText("bold", "Options:")}
+    --config, -c  Path to the configuration file (default: config.json)
+                  If it doesn't exist, it will be created with default values
+    --help        Show this help message
+    --version     Show the current version
+
+  ${styleText("bold", "Example:")}
+    $ midinrm -c myconfig.json
+`);
+  process.exit(0);
+}
+
+if(flags.version) {
+  console.log(`${pkg.name} v${pkg.version}`);
+  process.exit(0);
+}
 
 //#region consts
 
@@ -14,19 +73,13 @@ const defaultInstrumentName = "Grand Piano";
 /** Fallback track name when a MIDI track doesn't contain a `trackName` event. */
 const defaultTrackName = "Unknown Track";
 
-const { exit } = process;
+const callerPath = flags.callerPath && flags.callerPath.length > 0 ? decodeURIComponent(atob(flags.callerPath.replace(/"/g, ""))) : undefined;
+
+/** Returns the path relative to the directory from where this program was called, falls back to the current working directory */
+const getPathRelativeToCaller = (path: string) => join(callerPath ?? process.cwd(), path);
 
 /** Schedules a process exit after the current event loop tick. */
-const schedExit = (code: number) => setImmediate(() => exit(code));
-
-//#region types
-
-type MidiObj = {
-  path: string;
-  data: MidiData;
-  instrumentNames: Record<number, string>;
-  trackNames: Record<number, string>;
-};
+const schedExit = (code: number) => setImmediate(() => process.exit(code));
 
 //#region run
 
@@ -38,7 +91,7 @@ async function run() {
   const inputDir = config.input.directory;
   const filePattern = new RegExp(config.input.filePattern ?? ".*\\.midi?$", config.input.patternFlags);
 
-  const midiFilePaths = (await readdir(resolve(inputDir)))
+  const midiFilePaths = (await readdir(getPathRelativeToCaller(inputDir)))
     .filter(path => filePattern.test(basename(path)))
     .map(file => resolve(inputDir, file));
 
@@ -85,7 +138,7 @@ async function run() {
 
   console.log("Normalized channels.");
 
-  const outDir = resolve(config.output.directory);
+  const outDir = getPathRelativeToCaller(config.output.directory);
 
   try {
     const outDirStat = await stat(outDir);
@@ -155,19 +208,19 @@ function findInstrumentAndTrackNames(midi: MidiData): [instrumentNames: Record<n
 //#region config
 
 /** Loads the config and returns it. If it doesnt exist, creates a default config from config.template.json and returns it. */
-async function loadConfig(): Promise<NrmConfig> {
-  const configPath = resolve("./config.json");
+async function loadConfig(): Promise<Config> {
+  const configPath = getPathRelativeToCaller(flags.config);
   try {
-    const config = JSON.parse(String(await readFile(configPath))) as NrmConfig;
+    const config = JSON.parse(String(await readFile(configPath))) as Config;
     if(!hasProps(config, ["input", "output", "velocities", "channels"]))
       throw new Error("Invalid config format, missing one or more required properties.");
-    return config as NrmConfig;
+    return config as Config;
   }
   catch {
     console.log(styleText("yellow", "\nCouldn't load config file, creating a new one..."));
     await writeFile(configPath, JSON.stringify(cfgTemplate, null, 2));
-    console.log(styleText("green", "Created new config file at config.json. Please edit it, then run the script again.\n"));
-    return schedExit(0), cfgTemplate as NrmConfig;
+    console.log(styleText("green", `Created new config file at ${flags.config}\nPlease edit it, then run the script again.\n`));
+    return schedExit(0), cfgTemplate as Config;
   }
 }
 
