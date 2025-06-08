@@ -10,9 +10,8 @@
     "clearDirectory": true
   },
   "velocities": {
-    "min": 70.0,
+    "min": 90.0,
     "max": 127.0,
-    "scaleFactor": 1.0,
     "removeSilent": true
   },
   "channels": {

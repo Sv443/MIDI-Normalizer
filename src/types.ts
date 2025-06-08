@@ -32,8 +32,6 @@ export type VelocitiesOptions = {
   min: number;
   /** Maximum allowed velocity */
   max: number;
-  /** Whether to apply a logarithmic scale to the velocities */
-  scaleFactor?: number;
   /** Whether to remove silent notes (velocity <= 0.x) */
   removeSilent?: boolean;
 };

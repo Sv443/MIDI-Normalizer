@@ -63,12 +63,6 @@
           "default": 1.0,
           "description": "Maximum velocity value"
         },
-        "scaleFactor": {
-          "type": "number",
-          "minimum": 0,
-          "default": 1.0,
-          "description": "Scale factor for velocities"
-        },
         "removeSilent": {
           "type": "boolean",
           "default": false,
