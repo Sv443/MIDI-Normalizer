@@ -1,7 +1,6 @@
-import { writeFile, readFile, stat, mkdir } from "node:fs/promises";
-import { dirname, resolve, basename, extname } from "node:path";
+import { writeFile, readFile, stat, mkdir, readdir, unlink } from "node:fs/promises";
+import { resolve, basename, extname } from "node:path";
 import { styleText } from "node:util";
-import readdirGlob from "tiny-readdir-glob";
 import { parseMidi, writeMidi, type MidiData } from "midi-file";
 import { randomId } from "@sv443-network/coreutils";
 import type { ChannelsOptions, NrmConfig, OutputOptions, VelocitiesOptions } from "./types.js";
@@ -37,10 +36,11 @@ async function run() {
   console.log("Loaded configuration.");
 
   const inputDir = config.input.directory;
-  const filePattern = new RegExp(config.input.filePattern ?? ".*\\.midi?$", config.input.patternCaseInsensitive ? "i" : undefined);
+  const filePattern = new RegExp(config.input.filePattern ?? ".*\\.midi?$", config.input.patternFlags);
 
-  const midiFilePaths = (await findFiles(resolve(dirname(inputDir))))
-    .filter(path => filePattern.test(basename(path)));
+  const midiFilePaths = (await readdir(resolve(inputDir)))
+    .filter(path => filePattern.test(basename(path)))
+    .map(file => resolve(inputDir, file));
 
   if(midiFilePaths.length === 0) {
     console.error(styleText("red", "No MIDI files found in the specified directory."));
@@ -97,6 +97,14 @@ async function run() {
     console.log("Created output directory:", outDir);
   }
 
+  if(config.output.clearDirectory !== false) {
+    const outFiles = (await readdir(outDir)).filter(file => filePattern.test(file));
+    if(outFiles.length > 0) {
+      await Promise.all(outFiles.map(file => unlink(resolve(outDir, file))));
+      console.log("Cleared output directory:", outDir);
+    }
+  }
+
   await Promise.all(
     chNormalized.map(async (midi) => {
       const outFile = resolve(`${outDir}/${getOutFileName(midi, config.output)}`);
@@ -124,7 +132,7 @@ function getOutFileName(midi: MidiObj, outCfg: OutputOptions): string {
   return outCfg.fileName
     .replace("${full}", inBaseName)
     .replace("${name}", inFileName)
-    .replace("${ext}", inFileExt);
+    .replace("${ext}", inFileExt.startsWith(".") ? inFileExt.slice(1) : inFileExt);
 }
 
 /** Finds the `instrumentName` or `trackName` event in the MIDI data and returns it as a string. */
@@ -148,12 +156,12 @@ function findInstrumentAndTrackNames(midi: MidiData): [instrumentNames: Record<n
 
 /** Loads the config and returns it. If it doesnt exist, creates a default config from config.template.json and returns it. */
 async function loadConfig(): Promise<NrmConfig> {
-  const configPath = resolve("config.json");
+  const configPath = resolve("./config.json");
   try {
-    const config = await import(configPath);
-    if(!hasProps(config.default, ["input", "output", "velocities", "channels"]))
+    const config = JSON.parse(String(await readFile(configPath))) as NrmConfig;
+    if(!hasProps(config, ["input", "output", "velocities", "channels"]))
       throw new Error("Invalid config format, missing one or more required properties.");
-    return config.default as NrmConfig;
+    return config as NrmConfig;
   }
   catch {
     console.log(styleText("yellow", "Couldn't load config file, creating a new one..."));
@@ -165,15 +173,6 @@ async function loadConfig(): Promise<NrmConfig> {
 /** Returns true, if {@linkcode obj} has all the properties in the {@linkcode props} array */
 function hasProps(obj: object, props: string[]): boolean {
   return props.every(prop => prop in obj);
-}
-
-//#region findFiles
-
-/** Returns an array of all MIDI file paths in the given glob pattern, with absolute paths */
-async function findFiles(glob: string) {
-  return ((await readdirGlob(glob)).files as string[])
-    .filter(file => file.endsWith(".mid") || file.endsWith(".midi"))
-    .map(file => resolve(file));
 }
 
 //#region normalizeVelocities
@@ -253,8 +252,8 @@ function normalizeChannels(midi: MidiObj, options: ChannelsOptions): MidiObj {
     midi.data.tracks.forEach((track, ti) => {
       if("patterns" in match) {
         if(match.patterns.some(pattern =>
-          (midi.instrumentNames[ti] && pattern.test(midi.instrumentNames[ti])) ||
-          (midi.trackNames[ti] && pattern.test(midi.trackNames[ti]))
+          (midi.instrumentNames[ti] && new RegExp(pattern, match.patternFlags ?? "i").test(midi.instrumentNames[ti])) ||
+          (midi.trackNames[ti] && new RegExp(pattern, match.patternFlags ?? "i").test(midi.trackNames[ti]))
         )) {
           track.forEach(event => {
             if("channel" in event)

@@ -2,11 +2,12 @@
   "input": {
     "directory": "input",
     "filePattern": ".*\\.midi?$",
-    "patternCaseInsensitive": false
+    "patternFlags": "i"
   },
   "output": {
     "directory": "output",
-    "fileName": "${name}-nrm.${ext}"
+    "fileName": "${name}-nrm.${ext}",
+    "clearDirectory": true
   },
   "velocities": {
     "min": 70.0,

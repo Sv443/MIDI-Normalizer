@@ -18,10 +18,9 @@
           "default": ".*\\.mid$",
           "description": "Escaped EcmaScript regular expression pattern to match MIDI files - use \".*\\.midi?$\" to match all files ending in .mid or .midi"
         },
-        "patternCaseInsensitive": {
-          "type": "boolean",
-          "default": false,
-          "description": "If true, the file pattern matching will be case insensitive"
+        "patternFlags": {
+          "type": "string",
+          "description": "Flags for the regular expression pattern. Defaults to none. Set to \"i\" for case-insensitive matching."
         }
       }
     },
@@ -33,6 +32,11 @@
         "directory": {
           "type": "string",
           "description": "Path to the output directory where normalized MIDI files will be saved"
+        },
+        "clearDirectory": {
+          "type": "boolean",
+          "default": true,
+          "description": "If true, clears the output directory before writing new files"
         },
         "fileName": {
           "type": "string",
@@ -104,6 +108,10 @@
                       "type": "string"
                     },
                     "description": "Patterns to match against MIDI channel / instrument names"
+                  },
+                  "patternFlags": {
+                    "type": "string",
+                    "description": "Flags for the regular expression pattern. Defaults to \"i\" (case-insensitive matching)."
                   },
                   "channel": {
                     "type": "number",

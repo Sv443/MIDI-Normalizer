@@ -14,13 +14,15 @@ export type InputOptions = {
   directory: string;
   /** Pattern to match MIDI files - defaults to `.*\\.midi?$` */
   filePattern?: string;
-  /** Whether to match the file pattern case-insensitively */
-  patternCaseInsensitive?: boolean;
+  /** Which flags to use for the file pattern RegExp - defaults to none */
+  patternFlags?: string;
 };
 
 export type OutputOptions = {
   /** Path to the directory where normalized MIDI files will be saved */
   directory: string;
+  /** Whether to clear the output directory before writing new files - defaults to true */
+  clearDirectory?: boolean;
   /** Name pattern for each normalized MIDI file */
   fileName: string;
 };
@@ -45,7 +47,9 @@ export type ChannelsOptions = {
     & (
       | {
         /** RegExps to use to match the instrument name */
-        patterns: RegExp[];
+        patterns: string[];
+        /** Flags to use for the RegExp patterns - defaults to "i" */
+        patternFlags?: string;
       }
       | {
         /** Strings to use to match the instrument name via .includes() */
