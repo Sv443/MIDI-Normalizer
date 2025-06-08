@@ -8,12 +8,18 @@ importers:
 
   .:
     dependencies:
-      '@tonejs/midi':
-        specifier: ^2.0.28
-        version: 2.0.28
+      '@sv443-network/coreutils':
+        specifier: ^1.0.0
+        version: 1.0.0
+      midi-file:
+        specifier: ^1.2.4
+        version: 1.2.4
       prompts:
         specifier: ^2.4.2
         version: 2.4.2
+      tiny-readdir-glob:
+        specifier: ^1.23.2
+        version: 1.23.2
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
@@ -277,8 +283,8 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@tonejs/midi@2.0.28':
-    resolution: {integrity: sha512-RII6YpInPsOZ5t3Si/20QKpNqB1lZ2OCFJSOzJxz38YdY/3zqDr3uaml4JuCWkdixuPqP1/TBnXzhQ39csyoVg==}
+  '@sv443-network/coreutils@1.0.0':
+    resolution: {integrity: sha512-SYzNwo88BrCghNwZDhGnk7K+Mb+UMGSXGjm+GyYk3Dr7uCirkWG2JJVi1iYLKaX4oTC3ZpPWuTwWzf8ABP8uUw==}
 
   '@types/estree@1.0.7':
     resolution: {integrity: sha512-w28IoSUCJpidD/TGviZwwMJckNESJZXFu7NBZ5YJ4mEUnNraUn9Pm8HSZm/jDF1pDWYKspWE7oVphigUPRakIQ==}
@@ -368,9 +374,6 @@ packages:
 
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
-
-  array-flatten@3.0.0:
-    resolution: {integrity: sha512-zPMVc3ZYlGLNk4mpK1NzP2wg0ml9t7fUgDsayR5Y5rSzxQilzR9FGu/EH2jQOcKSAeAfWeylyW8juy3OkWRvNA==}
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
@@ -529,6 +532,9 @@ packages:
     resolution: {integrity: sha512-O+7l9tPdHCU320IigZZPj5zmRCFG9xHmx9cU8FqU2Rp+JN714seHV+2S9+JslCpY4gJwU2vOGox0wzgae/MCEg==}
     engines: {node: '>=18'}
 
+  grammex@3.1.10:
+    resolution: {integrity: sha512-UCfMsV/sfqk4TN1+m5ehSOXuADyLUgSuwMI2vCVlbN/REoSmTl4eagswC9DzzVxtsKv7Yp2CmIJNn4fMk8PaQA==}
+
   graphemer@1.4.0:
     resolution: {integrity: sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==}
 
@@ -619,6 +625,10 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
+  nanoevents@9.1.0:
+    resolution: {integrity: sha512-Jd0fILWG44a9luj8v5kED4WI+zfkkgwKyRQKItTtlPfEsh7Lznfi1kr8/iZ+XAIss4Qq5GqRB0qtWbaz9ceO/A==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
@@ -658,6 +668,12 @@ packages:
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
+
+  promise-make-counter@1.0.2:
+    resolution: {integrity: sha512-FJAxTBWQuQoAs4ZOYuKX1FHXxEgKLEzBxUvwr4RoOglkTpOjWuM+RXsK3M9q5lMa8kjqctUrhwYeZFT4ygsnag==}
+
+  promise-make-naked@3.0.2:
+    resolution: {integrity: sha512-B+b+kQ1YrYS7zO7P7bQcoqqMUizP06BOyNSBEnB5VJKDSWo8fsVuDkfSmwdjF0JsRtaNh83so5MMFJ95soH5jg==}
 
   prompts@2.4.2:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
@@ -708,6 +724,12 @@ packages:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
 
+  tiny-readdir-glob@1.23.2:
+    resolution: {integrity: sha512-+47FIdgzEtZj03mOyq9iAljlZZNleqSEwe3i6Uzkzec5axbMg32Vp78U2fLo4TiCMv9gzjnno7yJn34z5pXECw==}
+
+  tiny-readdir@2.7.4:
+    resolution: {integrity: sha512-721U+zsYwDirjr8IM6jqpesD/McpZooeFi3Zc6mcjy1pse2C+v19eHPFRqz4chGXZFw7C3KITDjAtHETc2wj7Q==}
+
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
@@ -753,6 +775,18 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  zeptomatch-explode@1.0.1:
+    resolution: {integrity: sha512-7cUQASLLRGZ20+zEQcEgQ9z/gH1+jSfrNg4KfRJSxF1QU2fpymAwWvnAxl69GD5pr3IV0V9vo3ke2np//Nh4tQ==}
+
+  zeptomatch-is-static@1.0.1:
+    resolution: {integrity: sha512-bN9q7H/UdXhkub01WE7b7Grg07jLldNnIWG2T1IpBq5NtvcQ4DwFbNiGGapnbKHUdWiCNjg/bIvixV88nj9gog==}
+
+  zeptomatch-unescape@1.0.1:
+    resolution: {integrity: sha512-xhSFkKV0aQ03e/eiN4VhOTwJhcqfH7SMiGHrWKw9gXi+0EVJAxJ8Gt4ehozYsYLhUXL1JFbP1g3EE6ZmkStB0g==}
+
+  zeptomatch@2.0.1:
+    resolution: {integrity: sha512-nbnIYF2n3o3EqV36HkIhEMLIDFbG3M6RUjhkdKIn6qqIJkdkL7bgVSfTTCEXBJpk1T45tLfEYfStndJc2lUEnA==}
 
 snapshots:
 
@@ -900,10 +934,9 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.19.1
 
-  '@tonejs/midi@2.0.28':
+  '@sv443-network/coreutils@1.0.0':
     dependencies:
-      array-flatten: 3.0.0
-      midi-file: 1.2.4
+      nanoevents: 9.1.0
 
   '@types/estree@1.0.7': {}
 
@@ -1028,8 +1061,6 @@ snapshots:
       color-convert: 2.0.1
 
   argparse@2.0.1: {}
-
-  array-flatten@3.0.0: {}
 
   balanced-match@1.0.2: {}
 
@@ -1227,6 +1258,8 @@ snapshots:
 
   globals@16.2.0: {}
 
+  grammex@3.1.10: {}
+
   graphemer@1.4.0: {}
 
   has-flag@4.0.0: {}
@@ -1298,6 +1331,8 @@ snapshots:
 
   ms@2.1.3: {}
 
+  nanoevents@9.1.0: {}
+
   natural-compare@1.4.0: {}
 
   optionator@0.9.4:
@@ -1330,6 +1365,12 @@ snapshots:
   pnpm@10.11.0: {}
 
   prelude-ls@1.2.1: {}
+
+  promise-make-counter@1.0.2:
+    dependencies:
+      promise-make-naked: 3.0.2
+
+  promise-make-naked@3.0.2: {}
 
   prompts@2.4.2:
     dependencies:
@@ -1365,6 +1406,18 @@ snapshots:
   supports-color@7.2.0:
     dependencies:
       has-flag: 4.0.0
+
+  tiny-readdir-glob@1.23.2:
+    dependencies:
+      tiny-readdir: 2.7.4
+      zeptomatch: 2.0.1
+      zeptomatch-explode: 1.0.1
+      zeptomatch-is-static: 1.0.1
+      zeptomatch-unescape: 1.0.1
+
+  tiny-readdir@2.7.4:
+    dependencies:
+      promise-make-counter: 1.0.2
 
   to-regex-range@5.0.1:
     dependencies:
@@ -1402,3 +1455,13 @@ snapshots:
   word-wrap@1.2.5: {}
 
   yocto-queue@0.1.0: {}
+
+  zeptomatch-explode@1.0.1: {}
+
+  zeptomatch-is-static@1.0.1: {}
+
+  zeptomatch-unescape@1.0.1: {}
+
+  zeptomatch@2.0.1:
+    dependencies:
+      grammex: 3.1.10

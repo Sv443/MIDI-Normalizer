@@ -1,23 +1,32 @@
 {
+  "input": {
+    "path": "input",
+    "filePattern": ".*\\.midi?$"
+  },
+  "output": {
+    "path": "output",
+    "fileName": "${name}-nrm.${ext}"
+  },
   "velocities": {
     "min": 70.0,
     "max": 127.0,
-    "scaleFactor": 1.2
+    "scaleFactor": 1.0,
+    "removeSilent": true
   },
   "channels": {
     "match": [
       {
         "patterns": [".*Pizzicato?.*"],
-        "channels": [1],
+        "channel": 1,
         "exclusive": true
       },
       {
         "patterns": [".*Strings?.*"],
-        "channels": [2]
+        "channel": 2
       },
       {
         "includes": [".*Harpsi.*", ".*Clavichord.*", ".*Carillon.*"],
-        "channels": [3, 4]
+        "channel": 3
       }
     ]
   }

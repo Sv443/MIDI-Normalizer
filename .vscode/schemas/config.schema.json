@@ -2,22 +2,55 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "description": "MIDI-Normalizer configuration file",
-  "required": ["velocities", "channels"],
+  "required": ["input", "output", "velocities", "channels"],
   "properties": {
+    "input": {
+      "description": "Configuration for the input files",
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the input directory containing MIDI files"
+        },
+        "filePattern": {
+          "type": "string",
+          "default": ".*\\.mid$",
+          "description": "Escaped EcmaScript regular expression pattern to match MIDI files - use \".*\\.midi?$\" to match all files ending in .mid or .midi"
+        }
+      }
+    },
+    "output": {
+      "description": "Configuration for the files that result from normalization",
+      "type": "object",
+      "required": ["path", "fileName"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the output directory where normalized MIDI files will be saved"
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Template for the output file name. Supports placeholders. Use ${full} for the full input file name, ${name} for the input file name without extension, and ${ext} for the original file extension."
+        }
+      }
+    },
     "velocities": {
-      "description": "Velocity settings for MIDI normalization",
+      "description": "Velocity normalization settings",
       "type": "object",
       "required": ["min", "max"],
       "properties": {
         "min": {
           "type": "number",
           "minimum": 0,
+          "maximum": 127,
           "default": 0.1,
           "description": "Minimum velocity value"
         },
         "max": {
           "type": "number",
           "minimum": 0,
+          "maximum": 127,
           "default": 1.0,
           "description": "Maximum velocity value"
         },
@@ -26,11 +59,16 @@
           "minimum": 0,
           "default": 1.0,
           "description": "Scale factor for velocities"
+        },
+        "removeSilent": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, removes notes with velocities close to or equal to zero (this effectively removes notes that only exist for artwork purposes)"
         }
       }
     },
     "channels": {
-      "description": "Channel matching rules for MIDI normalization",
+      "description": "Channel matching and remapping settings",
       "type": "object",
       "required": ["match"],
       "properties": {
@@ -44,7 +82,7 @@
                 "properties": {
                   "exclusive": {
                     "type": "boolean",
-                    "description": "If true, when a pattern matches, no other patterns will be applied to the same channel",
+                    "description": "If true, when this pattern matches, no other additional patterns will be applied to the same channel",
                     "default": false
                   }
                 }
@@ -53,7 +91,7 @@
             "oneOf": [
               {
                 "type": "object",
-                "required": ["patterns", "channels"],
+                "required": ["patterns", "channel"],
                 "properties": {
                   "patterns": {
                     "type": "array",
@@ -62,20 +100,17 @@
                     },
                     "description": "Patterns to match against MIDI channel / instrument names"
                   },
-                  "channels": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "maximum": 16
-                    },
-                    "description": "MIDI channels to apply the patterns to"
+                  "channel": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 16,
+                    "description": "MIDI channel to apply the patterns to"
                   }
                 }
               },
               {
                 "type": "object",
-                "required": ["includes", "channels"],
+                "required": ["includes", "channel"],
                 "properties": {
                   "includes": {
                     "type": "array",
@@ -84,14 +119,11 @@
                     },
                     "description": "String include patterns for channel / instrument name matching"
                   },
-                  "channels": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "maximum": 16
-                    },
-                    "description": "MIDI channels to apply the string-includes to"
+                  "channel": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 16,
+                    "description": "MIDI channel to apply the string includes to"
                   }
                 }
               }
