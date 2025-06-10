@@ -2,7 +2,7 @@ import { writeFile, readFile, stat, mkdir, readdir, unlink } from "node:fs/promi
 import { resolve, basename, extname, join } from "node:path";
 import { styleText } from "node:util";
 import { parseMidi, writeMidi, type MidiData, type MidiEvent } from "midi-file";
-import { randomId } from "@sv443-network/coreutils";
+import { mapRange, randomId } from "@sv443-network/coreutils";
 import meow from "meow";
 import type { ChannelsOptions, Config, MidiObj, MiscOptions, OutputOptions, VelocitiesOptions } from "./types.js";
 import cfgTemplate from "../config.template.json" with { type: "json" };
@@ -40,8 +40,6 @@ const { flags } = meow({
   importMeta: import.meta,
   inferType: true,
 });
-
-console.log(flags);
 
 if(flags.help) {
   console.log(`
@@ -166,20 +164,52 @@ async function run() {
     }
   }
 
-  console.log("Writing files...");
+  console.log("Writing files...\n");
 
-  await Promise.all(
-    finalMidis.map(async (midi) => {
-      const outFile = resolve(`${outDir}/${getOutFileName(midi, config.output)}`);
+  // await Promise.all(
+  //   finalMidis.map(async (midi) => {
+  //     const outFile = resolve(`${outDir}/${getOutFileName(midi, config.output)}`);
+  //     try {
+  //       await writeFile(outFile, Buffer.from(writeMidi(midi.data, { running: true, useByte9ForNoteOff: true })));
+  //       console.log(styleText("green", `Saved normalized MIDI file to ${outFile}`));
+  //     }
+  //     catch(e) {
+  //       console.error(styleText("red", `Error saving MIDI file ${outFile}:`), e);
+  //     }
+  //   })
+  // );
+
+  const concurrencyLimit = 10;
+  const promises: Promise<void>[] = [];
+  for(let i = 0; i < finalMidis.length; i++) {
+    const midi = finalMidis[i];
+    const outFile = resolve(`${outDir}/${getOutFileName(midi, config.output)}`);
+    
+    const writePromise = (async () => {
       try {
         await writeFile(outFile, Buffer.from(writeMidi(midi.data, { running: true, useByte9ForNoteOff: true })));
-        console.log(styleText("green", `Saved normalized MIDI file to ${outFile}`));
+        console.log(`- Finished processing: ${outFile}`);
       }
       catch(e) {
         console.error(styleText("red", `Error saving MIDI file ${outFile}:`), e);
       }
-    })
-  );
+    })();
+
+    promises.push(writePromise);
+
+    if(promises.length >= concurrencyLimit) {
+      await Promise.all(promises);
+      promises.length = 0;
+      const perc = mapRange(i + 1, finalMidis.length, 100);
+      console.log(`  ${styleText("green", `${perc.toFixed(0)}%`)} (${i + 1}/${finalMidis.length})`);
+    }
+  }
+
+  if(promises.length > 0)
+    await Promise.all(promises);
+
+  console.log(styleText("greenBright", `\nAll ${finalMidis.length} MIDI files processed successfully.`));
+  return schedExit(0);
 }
 
 run();
