@@ -4,7 +4,7 @@ import { styleText } from "node:util";
 import { parseMidi, writeMidi, type MidiData } from "midi-file";
 import { randomId } from "@sv443-network/coreutils";
 import meow from "meow";
-import type { ChannelsOptions, Config, MidiObj, OutputOptions, VelocitiesOptions } from "./types.js";
+import type { ChannelsOptions, Config, MidiObj, MiscOptions, OutputOptions, VelocitiesOptions } from "./types.js";
 import cfgTemplate from "../config.template.json" with { type: "json" };
 import pkg from "../package.json" with { type: "json" };
 
@@ -138,6 +138,14 @@ async function run() {
 
   console.log("Normalized channels.");
 
+  const buffersAdded = chNormalized.map(midi => addBuffers(midi, config.misc));
+
+  console.log("Added buffers to first track, if specified.");
+
+  const finalMidis = buffersAdded;
+
+  console.log("Finalizing...");
+
   const outDir = getPathRelativeToCaller(config.output.directory);
 
   try {
@@ -159,7 +167,7 @@ async function run() {
   }
 
   await Promise.all(
-    chNormalized.map(async (midi) => {
+    finalMidis.map(async (midi) => {
       const outFile = resolve(`${outDir}/${getOutFileName(midi, config.output)}`);
       try {
         await writeFile(outFile, Buffer.from(writeMidi(midi.data, { running: true, useByte9ForNoteOff: true })));
@@ -174,7 +182,7 @@ async function run() {
 
 run();
 
-//#region misc
+//#region utils
 
 /** Returns the output file name for the given MIDI object and output configuration. */
 function getOutFileName(midi: MidiObj, outCfg: OutputOptions): string {
@@ -239,14 +247,14 @@ function hasProps(obj: object, props: string[]): boolean {
 function normalizeVelocities(midi: MidiObj, opts: VelocitiesOptions): MidiObj {
   const channelVelocities: Record<number, { min: number; max: number }> = {};
 
-  // Step 1: Extract the normal range of velocities from each channel
-  for (const track of midi.data.tracks) {
-    for (const event of track) {
-      if (event.type === "noteOn" && event.velocity > 0) {
+  // 1. extract normal range of velocities
+  for(const track of midi.data.tracks) {
+    for(const event of track) {
+      if(event.type === "noteOn" && event.velocity > 0) {
         const channel = event.channel;
-        if (!channelVelocities[channel]) {
+        if(!channelVelocities[channel])
           channelVelocities[channel] = { min: event.velocity, max: event.velocity };
-        } else {
+        else {
           channelVelocities[channel].min = Math.min(channelVelocities[channel].min, event.velocity);
           channelVelocities[channel].max = Math.max(channelVelocities[channel].max, event.velocity);
         }
@@ -254,17 +262,17 @@ function normalizeVelocities(midi: MidiObj, opts: VelocitiesOptions): MidiObj {
     }
   }
 
-  // Step 2: Scale the velocities to fit within the range of minVelocity and maxVelocity. Don't mess up the relative differences between velocities, also across channels.
+  // 2. scale velocities - don't mess up relative differences between velocities, also across channels
   for (const track of midi.data.tracks) {
     for (const event of track) {
       if (event.type === "noteOn" && event.velocity > 0) {
         const channel = event.channel;
         const { min, max } = channelVelocities[channel];
         if (min === max) {
-          // If all velocities in the channel are the same, set to median of the range
+          // if all velocities in the channel are the same, set to median of the range
           event.velocity = Math.round((opts.min + opts.max) / 2);
         } else {
-          // Scale the velocity to fit within the new range
+          // scale velocity to fit within new range
           event.velocity = Math.round(((event.velocity - min) / (max - min)) * (opts.max - opts.min) + opts.min);
         }
       }
@@ -327,6 +335,48 @@ function normalizeChannels(midi: MidiObj, options: ChannelsOptions): MidiObj {
         }
       }
     });
+  }
+  return midi;
+}
+
+//#region addBuffers
+
+/** Adds buffers to the beginning or end of the first track of the MIDI file, if specified in the options. */
+function addBuffers(midi: MidiObj, opts: MiscOptions): MidiObj {
+  if(opts.startBuffer || opts.endBuffer) {
+    const firstTrack = midi.data.tracks[0];
+    if(!firstTrack)
+      return midi;
+
+    const tpb = midi.data.header.ticksPerBeat ?? 480;
+
+    const startBufferTicks = opts.startBuffer ? Math.round(opts.startBuffer * tpb) : 0;
+    const endBufferTicks = opts.endBuffer ? Math.round(opts.endBuffer * tpb) : 0;
+
+    if(startBufferTicks > 0) {
+      firstTrack.unshift({
+        deltaTime: 0,
+        type: "setTempo",
+        microsecondsPerBeat: 500000, // default tempo (120 BPM)
+      });
+      firstTrack.unshift({
+        deltaTime: startBufferTicks,
+        type: "noteOn",
+        noteNumber: 0,
+        velocity: 0,
+        channel: 0,
+      });
+    }
+
+    if(endBufferTicks > 0) {
+      firstTrack.push({
+        deltaTime: endBufferTicks,
+        type: "noteOff",
+        noteNumber: 0,
+        velocity: 0,
+        channel: 0,
+      });
+    }
   }
   return midi;
 }

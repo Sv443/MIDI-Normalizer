@@ -11,6 +11,8 @@ export type Config = {
   velocities: VelocitiesOptions;
   /** Options for normalizing channels */
   channels: ChannelsOptions;
+  /** Miscellaneous options */
+  misc: MiscOptions;
 }
 
 export type InputOptions = {
@@ -60,6 +62,13 @@ export type ChannelsOptions = {
     )
   >;
 };
+
+export type MiscOptions = {
+  /** Buffer in seconds to prepend to the first track of each MIDI file */
+  startBuffer?: number;
+  /** Buffer in seconds to append to the first track of each MIDI file */
+  endBuffer?: number;
+}
 
 //#region other
 

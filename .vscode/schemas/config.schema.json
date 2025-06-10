@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "description": "MIDI-Normalizer configuration file",
-  "required": ["input", "output", "velocities", "channels"],
+  "required": ["input", "output", "velocities", "channels", "misc"],
   "properties": {
     "input": {
       "description": "Configuration for the input files",
@@ -136,6 +136,20 @@
               }
             ]
           }
+        }
+      }
+    },
+    "misc": {
+      "description": "Miscellaneous settings",
+      "type": "object",
+      "properties": {
+        "startBuffer": {
+          "type": "number",
+          "description": "Number of seconds to add at the start of each MIDI file's first track. This can be used to compensate for playback latency."
+        },
+        "endBuffer": {
+          "type": "number",
+          "description": "Number of seconds to add at the end of each MIDI file's first track. This can be used to compensate for playback latency."
         }
       }
     }
