@@ -1,7 +1,7 @@
 import { writeFile, readFile, stat, mkdir, readdir, unlink } from "node:fs/promises";
 import { resolve, basename, extname, join } from "node:path";
 import { styleText } from "node:util";
-import { parseMidi, writeMidi, type MidiData } from "midi-file";
+import { parseMidi, writeMidi, type MidiData, type MidiEvent } from "midi-file";
 import { randomId } from "@sv443-network/coreutils";
 import meow from "meow";
 import type { ChannelsOptions, Config, MidiObj, MiscOptions, OutputOptions, VelocitiesOptions } from "./types.js";
@@ -140,7 +140,7 @@ async function run() {
 
   const buffersAdded = chNormalized.map(midi => addBuffers(midi, config.misc));
 
-  console.log("Added buffers to first track, if specified.");
+  console.log("Added buffers, if specified.");
 
   const finalMidis = buffersAdded;
 
@@ -165,6 +165,8 @@ async function run() {
       console.log("Cleared output directory:", outDir);
     }
   }
+
+  console.log("Writing files...");
 
   await Promise.all(
     finalMidis.map(async (midi) => {
@@ -341,41 +343,50 @@ function normalizeChannels(midi: MidiObj, options: ChannelsOptions): MidiObj {
 
 //#region addBuffers
 
-/** Adds buffers to the beginning or end of the first track of the MIDI file, if specified in the options. */
+/** Adds buffers to the beginning or end of the shortest or longest track of the MIDI file, if specified in the options. */
 function addBuffers(midi: MidiObj, opts: MiscOptions): MidiObj {
-  if(opts.startBuffer || opts.endBuffer) {
-    const firstTrack = midi.data.tracks[0];
-    if(!firstTrack)
-      return midi;
+  const tpb = midi.data.header.ticksPerBeat ?? 480;
 
-    const tpb = midi.data.header.ticksPerBeat ?? 480;
+  // increment all event times by opts.startBuffer (seconds)
+  if(opts.startBuffer) {
+    const startBufferTicks = Math.round(opts.startBuffer * tpb);
+    for(const track of midi.data.tracks)
+      for(const event of track)
+        event.deltaTime += startBufferTicks;
+  }
 
-    const startBufferTicks = opts.startBuffer ? Math.round(opts.startBuffer * tpb) : 0;
-    const endBufferTicks = opts.endBuffer ? Math.round(opts.endBuffer * tpb) : 0;
+  // add a ghost note at the end of the track containing the event with the latest time, if opts.endBuffer is specified
+  if(opts.endBuffer) {
+    const endBufferTicks = Math.round(opts.endBuffer * tpb);
+    const longestTrack = midi.data.tracks.reduce((longest, current) => (
+      current.length > longest.length ? current : longest
+    ), midi.data.tracks[0]);
+    const lastEvent = longestTrack[longestTrack.length - 1];
 
-    if(startBufferTicks > 0) {
-      firstTrack.unshift({
-        deltaTime: 0,
-        type: "setTempo",
-        microsecondsPerBeat: 500000, // default tempo (120 BPM)
-      });
-      firstTrack.unshift({
-        deltaTime: startBufferTicks,
-        type: "noteOn",
-        noteNumber: 0,
-        velocity: 0,
-        channel: 0,
-      });
-    }
+    const channel = longestTrack.some(event => "channel" in event) ? longestTrack.find(event => "channel" in event)?.channel ?? 1 : 1;
 
-    if(endBufferTicks > 0) {
-      firstTrack.push({
-        deltaTime: endBufferTicks,
-        type: "noteOff",
-        noteNumber: 0,
-        velocity: 0,
-        channel: 0,
-      });
+    if(lastEvent) {
+      const notes = [
+        {
+          type: "noteOn",
+          noteNumber: 60,
+          velocity: 0,
+          deltaTime: lastEvent.deltaTime + endBufferTicks,
+          channel,
+        },
+        {
+          type: "noteOff",
+          noteNumber: 60,
+          velocity: 0,
+          deltaTime: lastEvent.deltaTime + endBufferTicks + 1,
+          channel,
+        }
+      ] satisfies MidiEvent[];
+
+      // shift notes in at the end of the longestTrack, after the last note events
+      const lastNoteIndex = longestTrack.findLastIndex(event => event.type === "noteOn" || event.type === "noteOff");
+      if(lastNoteIndex !== -1)
+        longestTrack.splice(lastNoteIndex + 1, 0, ...notes);
     }
   }
   return midi;

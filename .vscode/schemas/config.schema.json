@@ -145,11 +145,11 @@
       "properties": {
         "startBuffer": {
           "type": "number",
-          "description": "Number of seconds to add at the start of each MIDI file's first track. This can be used to compensate for playback latency."
+          "description": "Number of seconds to delay the start of each MIDI file's track by. This can be used to compensate for playback latency."
         },
         "endBuffer": {
           "type": "number",
-          "description": "Number of seconds to add at the end of each MIDI file's first track. This can be used to compensate for playback latency."
+          "description": "Number of seconds to add by inserting a silent note at the end of each MIDI file's longest track. This can be used to compensate for playback latency."
         }
       }
     }
