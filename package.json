@@ -2,10 +2,10 @@
   "name": "midi-normalizer",
   "version": "1.0.0",
   "description": "Bulk-normalizes MIDI files to be in the desired velocity range and channel assignment.",
-  "main": "src/index.ts",
+  "main": "src/main.ts",
   "type": "module",
   "scripts": {
-    "start": "tsx src/index.ts",
+    "start": "tsx src/main.ts",
     "test": "tsx test.ts",
     "global": "npm link"
   },

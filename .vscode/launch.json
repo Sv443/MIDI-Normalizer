@@ -2,16 +2,20 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "src/index.ts",
+      "name": "main.ts",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/src/index.ts",
+      "program": "${workspaceFolder}/src/main.ts",
       "runtimeExecutable": "tsx",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": [
         "<node_internals>/**",
         "${workspaceFolder}/node_modules/**",
+      ],
+      "args": [
+        "--config",
+        "${workspaceFolder}/config.json",
       ],
     },
     {
