@@ -1,4 +1,4 @@
-import type { MidiEvent } from "midi-file";
+import type { MidiEvent, MidiSetTempoEvent } from "midi-file";
 import type { ChannelsOptions, MidiObj, MiscOptions, VelocitiesOptions } from "./types.js";
 
 //#region normalizeVelocities
@@ -45,6 +45,8 @@ export function normalizeVelocities(midi: MidiObj, opts: VelocitiesOptions): Mid
 
   return midi;
 }
+
+//#region removeSilent
 
 /** Removes all noteOn events and their associated noteOff event with a velocity of 0 from the MIDI data. */
 export function removeSilent(midi: MidiObj): MidiObj {
@@ -105,42 +107,53 @@ export function normalizeChannels(midi: MidiObj, options: ChannelsOptions): Midi
 
 //#region addBuffers
 
+const ghostNoteDurationTicks = 480; // 480 ticks = 1 beat at 120 BPM
+
 /** Adds buffers to the beginning or end of the shortest or longest track of the MIDI file, if specified in the options. */
 export function addBuffers(midi: MidiObj, opts: MiscOptions): MidiObj {
   const tpb = midi.data.header.ticksPerBeat ?? 480;
 
-  // increment all event times by opts.startBuffer (seconds)
+  // increment all relevant events' times by opts.startBuffer (in seconds)
   if(opts.startBuffer) {
-    const startBufferTicks = Math.round(opts.startBuffer * tpb);
-    for(const track of midi.data.tracks)
+    for(const track of midi.data.tracks) {
+      const tempoEvt = track.find(event => event.type === "setTempo") as MidiSetTempoEvent | undefined;
+      const uspb = tempoEvt?.microsecondsPerBeat ?? 500000; // 500,000 = 120 BPM
+      const tps = (1000000 / uspb) * tpb;
+      const bufferTicks = Math.round(opts.startBuffer * tps);
+
       for(const event of track)
-        event.deltaTime += startBufferTicks;
+        if(["noteOn", "noteOff", "controlChange", "programChange", "pitchBend"].includes(event.type))
+          event.deltaTime += isNaN(bufferTicks) ? 0 : bufferTicks;
+    }
   }
 
   // add a ghost note at the end of the track containing the event with the latest time, if opts.endBuffer is specified
   if(opts.endBuffer) {
-    const endBufferTicks = Math.round(opts.endBuffer * tpb);
     const longestTrack = midi.data.tracks.reduce((longest, current) => (
       current.length > longest.length ? current : longest
     ), midi.data.tracks[0]);
     const lastEvent = longestTrack[longestTrack.length - 1];
 
-    const channel = longestTrack.some(event => "channel" in event) ? longestTrack.find(event => "channel" in event)?.channel ?? 1 : 1;
+    const tempoEvt = longestTrack.find(event => event.type === "setTempo") as MidiSetTempoEvent | undefined;
+    const uspb = tempoEvt?.microsecondsPerBeat ?? 500000; // 500,000 = 120 BPM
+    const tps = (1000000 / uspb) * tpb;
+    const bufferTicks = Math.round(opts.endBuffer * tps);
 
     if(lastEvent) {
+      const channel = longestTrack.some(event => "channel" in event) ? longestTrack.find(event => "channel" in event)?.channel ?? 1 : 1;
       const notes = [
         {
           type: "noteOn",
           noteNumber: 60,
           velocity: 0,
-          deltaTime: lastEvent.deltaTime + endBufferTicks,
+          deltaTime: lastEvent.deltaTime + bufferTicks,
           channel,
         },
         {
           type: "noteOff",
           noteNumber: 60,
           velocity: 0,
-          deltaTime: lastEvent.deltaTime + endBufferTicks + 1,
+          deltaTime: lastEvent.deltaTime + bufferTicks + ghostNoteDurationTicks,
           channel,
         }
       ] satisfies MidiEvent[];
