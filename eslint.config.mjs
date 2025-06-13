@@ -26,10 +26,12 @@ const config = [
       "src/dev/**/*",
       "**/test.ts",
     ],
-  }, ...compat.extends(
+  },
+  ...compat.extends(
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
-  ), {
+  ),
+  {
     plugins: {
       "@typescript-eslint": typescriptEslint,
     },
@@ -75,7 +77,8 @@ const config = [
       "comma-dangle": ["error", "only-multiline"],
       "no-misleading-character-class": "off",
     },
-  }, {
+  },
+  {
     files: ["**/*.js", "**/*.mjs", "**/*.cjs"],
     rules: {
       "@typescript-eslint/no-var-requires": "off",

@@ -1,83 +1,12 @@
 import { writeFile, readFile, stat, mkdir, readdir, unlink } from "node:fs/promises";
-import { resolve, basename, extname, join } from "node:path";
+import { resolve, basename } from "node:path";
 import { styleText } from "node:util";
-import { parseMidi, writeMidi, type MidiData, type MidiEvent } from "midi-file";
-import { mapRange, randomId } from "@sv443-network/coreutils";
-import meow from "meow";
-import type { ChannelsOptions, Config, MidiObj, MiscOptions, OutputOptions, VelocitiesOptions } from "./types.js";
-import cfgTemplate from "../config.template.json" with { type: "json" };
-import pkg from "../package.json" with { type: "json" };
-
-//#region cli
-
-const { flags } = meow({
-  flags: {
-    callerPath: {
-      type: "string",
-      description: "URI- and B64-encoded path from where the script was called",
-      default: btoa(encodeURIComponent(process.cwd())),
-    },
-    config: {
-      type: "string",
-      shortFlag: "C",
-      aliases: ["c", "cfg"],
-      default: "config.json",
-    },
-    help: {
-      type: "boolean",
-      shortFlag: "h",
-      aliases: ["H", "help", "?"],
-      description: "Show this help message",
-    },
-    version: {
-      type: "boolean",
-      shortFlag: "v",
-      aliases: ["V", "version"],
-      description: "Show the current version",
-    },
-  },
-  allowUnknownFlags: false,
-  importMeta: import.meta,
-  inferType: true,
-});
-
-if(flags.help) {
-  console.log(`
-  ${styleText("bold", "Usage:")}
-    $ midinrm [options]
-
-  ${styleText("bold", "Options:")}
-    --config, -c  Path to the configuration file (default: config.json)
-                  If it doesn't exist, it will be created with default values
-    --help        Show this help message
-    --version     Show the current version
-
-  ${styleText("bold", "Example:")}
-    $ midinrm -c myconfig.json
-`);
-  process.exit(0);
-}
-
-if(flags.version) {
-  console.log(`${pkg.name} v${pkg.version}`);
-  process.exit(0);
-}
-
-//#region consts
-
-/** Fallback instrument when a MIDI track doesn't contain an `instrumentName` event. */
-const defaultInstrumentName = "Grand Piano";
-
-/** Fallback track name when a MIDI track doesn't contain a `trackName` event. */
-const defaultTrackName = "Unknown Track";
-
-const callerPath = flags.callerPath && flags.callerPath.length > 0 ? decodeURIComponent(atob(flags.callerPath.replace(/"/g, ""))) : undefined;
-
-/** Returns the path relative to the directory from where this program was called, falls back to the current working directory */
-const getPathRelativeToCaller = (path: string) => join(callerPath ?? process.cwd(), path);
-
-/** Schedules a process exit after the current event loop tick. */
-const schedExit = (code: number) => setImmediate(() => process.exit(code));
+import { parseMidi, writeMidi } from "midi-file";
+import { mapRange, scheduleExit } from "@sv443-network/coreutils";
+import { addBuffers, normalizeChannels, normalizeVelocities, removeSilent } from "./normalize.js";
+import { findInstrumentAndTrackNames, getOutFileName, getPathRelativeToCaller } from "./utils.js";
+import { loadConfig } from "./config.js";
+import type { MidiObj } from "./types.js";
 
 //#region run
 
@@ -95,7 +24,7 @@ async function run() {
 
   if(midiFilePaths.length === 0) {
     console.error(styleText("red", "No MIDI files found in the specified directory."));
-    return schedExit(1);
+    return scheduleExit(1);
   }
 
   const midisRaw: (MidiObj | null)[] = (await Promise.all(
@@ -121,7 +50,7 @@ async function run() {
 
   if(midis.length === 0) {
     console.error(styleText("red", "No valid MIDI files found."));
-    return schedExit(1);
+    return scheduleExit(1);
   }
 
   const noSilent = midis.map(removeSilent);
@@ -166,19 +95,6 @@ async function run() {
 
   console.log("Writing files...\n");
 
-  // await Promise.all(
-  //   finalMidis.map(async (midi) => {
-  //     const outFile = resolve(`${outDir}/${getOutFileName(midi, config.output)}`);
-  //     try {
-  //       await writeFile(outFile, Buffer.from(writeMidi(midi.data, { running: true, useByte9ForNoteOff: true })));
-  //       console.log(styleText("green", `Saved normalized MIDI file to ${outFile}`));
-  //     }
-  //     catch(e) {
-  //       console.error(styleText("red", `Error saving MIDI file ${outFile}:`), e);
-  //     }
-  //   })
-  // );
-
   const concurrencyLimit = 10;
   const promises: Promise<void>[] = [];
   for(let i = 0; i < finalMidis.length; i++) {
@@ -209,215 +125,7 @@ async function run() {
     await Promise.all(promises);
 
   console.log(styleText("greenBright", `\nAll ${finalMidis.length} MIDI files processed successfully.`));
-  return schedExit(0);
+  return scheduleExit(0);
 }
 
 run();
-
-//#region utils
-
-/** Returns the output file name for the given MIDI object and output configuration. */
-function getOutFileName(midi: MidiObj, outCfg: OutputOptions): string {
-  const inBaseName = basename(midi.path);
-  const inFileExt = extname(inBaseName);
-  const inFileName = inBaseName.slice(0, -inFileExt.length);
-
-  return outCfg.fileName
-    .replace("${full}", inBaseName)
-    .replace("${name}", inFileName)
-    .replace("${ext}", inFileExt.startsWith(".") ? inFileExt.slice(1) : inFileExt);
-}
-
-/** Finds the `instrumentName` or `trackName` event in the MIDI data and returns it as a string. */
-function findInstrumentAndTrackNames(midi: MidiData): [instrumentNames: Record<number, string>, trackNames: Record<number, string>] {
-  const instrumentNames: Record<number, string> = {},
-    trackNames: Record<number, string> = {};
-
-  midi.tracks.forEach((track, ti) => {
-    for(const event of track) {
-      if(event.type === "instrumentName")
-        instrumentNames[ti] = event.text ?? defaultInstrumentName;
-      else if(event.type === "trackName")
-        trackNames[ti] = event.text ?? `${defaultTrackName} ${randomId(5, 36, false, true)}`;
-    }
-  });
-
-  return [instrumentNames, trackNames];
-}
-
-//#region config
-
-/** Loads the config and returns it. If it doesnt exist, creates a default config from config.template.json and returns it. */
-async function loadConfig(): Promise<Config> {
-  const configPath = getPathRelativeToCaller(flags.config);
-  try {
-    const config = JSON.parse(String(await readFile(configPath))) as Config;
-    if(!hasProps(config, ["input", "output", "velocities", "channels"]))
-      throw new Error("Invalid config format, missing one or more required properties.");
-    return config as Config;
-  }
-  catch {
-    console.log(styleText("yellow", "\nCouldn't load config file, creating a new one..."));
-    await writeFile(configPath, JSON.stringify(cfgTemplate, null, 2));
-    console.log(styleText("green", `Created new config file at ${flags.config}\nPlease edit it, then run the script again.\n`));
-    return schedExit(0), cfgTemplate as Config;
-  }
-}
-
-/** Returns true, if {@linkcode obj} has all the properties in the {@linkcode props} array */
-function hasProps(obj: object, props: string[]): boolean {
-  return props.every(prop => prop in obj);
-}
-
-//#region normalizeVelocities
-
-/**
- * Normalizes the velocities of all noteOn events in the given MIDI data.  
- * 1. Extracts the normal range of velocities from each channel.
- * 2. Scales the velocities to fit within the range of `minVelocity` and `maxVelocity`, while not messing up the relative differences between velocities, also across channels.
- */
-function normalizeVelocities(midi: MidiObj, opts: VelocitiesOptions): MidiObj {
-  const channelVelocities: Record<number, { min: number; max: number }> = {};
-
-  // 1. extract normal range of velocities
-  for(const track of midi.data.tracks) {
-    for(const event of track) {
-      if(event.type === "noteOn" && event.velocity > 0) {
-        const channel = event.channel;
-        if(!channelVelocities[channel])
-          channelVelocities[channel] = { min: event.velocity, max: event.velocity };
-        else {
-          channelVelocities[channel].min = Math.min(channelVelocities[channel].min, event.velocity);
-          channelVelocities[channel].max = Math.max(channelVelocities[channel].max, event.velocity);
-        }
-      }
-    }
-  }
-
-  // 2. scale velocities - don't mess up relative differences between velocities, also across channels
-  for (const track of midi.data.tracks) {
-    for (const event of track) {
-      if (event.type === "noteOn" && event.velocity > 0) {
-        const channel = event.channel;
-        const { min, max } = channelVelocities[channel];
-        if (min === max) {
-          // if all velocities in the channel are the same, set to median of the range
-          event.velocity = Math.round((opts.min + opts.max) / 2);
-        } else {
-          // scale velocity to fit within new range
-          event.velocity = Math.round(((event.velocity - min) / (max - min)) * (opts.max - opts.min) + opts.min);
-        }
-      }
-    }
-  }
-
-  return midi;
-}
-
-/** Removes all noteOn events and their associated noteOff event with a velocity of 0 from the MIDI data. */
-function removeSilent(midi: MidiObj): MidiObj {
-  for (const track of midi.data.tracks) {
-    for (let i = track.length - 1; i >= 0; i--) {
-      const event = track[i];
-      if (event.type === "noteOn" && event.velocity === 0) {
-        track.splice(i, 1);
-        // find the next noteOff event for the same note and channel
-        for (let j = i; j < track.length; j++) {
-          const nextEvent = track[j];
-          if (nextEvent.type === "noteOff" && nextEvent.noteNumber === event.noteNumber && nextEvent.channel === event.channel) {
-            track.splice(j, 1);
-            break;
-          }
-        }
-      }
-    }
-  }
-  return midi;
-}
-
-//#region normalizeChannels
-
-/**
- * Normalizes the channels of the MIDI files according to the given options.  
- * The goal is to have a consistent set of channels associated to instruments, regardless of the original MIDI file input.
- */
-function normalizeChannels(midi: MidiObj, options: ChannelsOptions): MidiObj {
-  for(const match of options.match) {
-    midi.data.tracks.forEach((track, ti) => {
-      if("patterns" in match) {
-        if(match.patterns.some(pattern =>
-          (midi.instrumentNames[ti] && new RegExp(pattern, match.patternFlags ?? "i").test(midi.instrumentNames[ti])) ||
-          (midi.trackNames[ti] && new RegExp(pattern, match.patternFlags ?? "i").test(midi.trackNames[ti]))
-        )) {
-          track.forEach(event => {
-            if("channel" in event)
-              event.channel = match.channel;
-          });
-        }
-      }
-      else if("includes" in match) {
-        if(match.includes.some(include =>
-          (midi.instrumentNames[ti] && midi.instrumentNames[ti].includes(include)) ||
-          (midi.trackNames[ti] && midi.trackNames[ti].includes(include))
-        )) {
-          track.forEach(event => {
-            if("channel" in event)
-              event.channel = match.channel;
-          });
-        }
-      }
-    });
-  }
-  return midi;
-}
-
-//#region addBuffers
-
-/** Adds buffers to the beginning or end of the shortest or longest track of the MIDI file, if specified in the options. */
-function addBuffers(midi: MidiObj, opts: MiscOptions): MidiObj {
-  const tpb = midi.data.header.ticksPerBeat ?? 480;
-
-  // increment all event times by opts.startBuffer (seconds)
-  if(opts.startBuffer) {
-    const startBufferTicks = Math.round(opts.startBuffer * tpb);
-    for(const track of midi.data.tracks)
-      for(const event of track)
-        event.deltaTime += startBufferTicks;
-  }
-
-  // add a ghost note at the end of the track containing the event with the latest time, if opts.endBuffer is specified
-  if(opts.endBuffer) {
-    const endBufferTicks = Math.round(opts.endBuffer * tpb);
-    const longestTrack = midi.data.tracks.reduce((longest, current) => (
-      current.length > longest.length ? current : longest
-    ), midi.data.tracks[0]);
-    const lastEvent = longestTrack[longestTrack.length - 1];
-
-    const channel = longestTrack.some(event => "channel" in event) ? longestTrack.find(event => "channel" in event)?.channel ?? 1 : 1;
-
-    if(lastEvent) {
-      const notes = [
-        {
-          type: "noteOn",
-          noteNumber: 60,
-          velocity: 0,
-          deltaTime: lastEvent.deltaTime + endBufferTicks,
-          channel,
-        },
-        {
-          type: "noteOff",
-          noteNumber: 60,
-          velocity: 0,
-          deltaTime: lastEvent.deltaTime + endBufferTicks + 1,
-          channel,
-        }
-      ] satisfies MidiEvent[];
-
-      // shift notes in at the end of the longestTrack, after the last note events
-      const lastNoteIndex = longestTrack.findLastIndex(event => event.type === "noteOn" || event.type === "noteOff");
-      if(lastNoteIndex !== -1)
-        longestTrack.splice(lastNoteIndex + 1, 0, ...notes);
-    }
-  }
-  return midi;
-}

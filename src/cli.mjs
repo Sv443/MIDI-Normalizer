@@ -13,8 +13,6 @@ const args = [
   `"${btoa(encodeURIComponent(process.cwd()))}"`,
 ];
 
-console.log(args);
-
 const child = spawn("node", args, {
   stdio: "inherit",
   cwd: join(import.meta.dirname, "../"),
